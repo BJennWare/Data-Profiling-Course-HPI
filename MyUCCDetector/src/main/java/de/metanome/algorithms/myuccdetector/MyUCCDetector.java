@@ -2,7 +2,6 @@ package de.metanome.algorithms.myuccdetector;
 
 import java.util.ArrayList;
 
-import de.metanome.algorithm_helper.data_structures.ColumnCombinationBitset;
 import de.metanome.algorithm_integration.AlgorithmConfigurationException;
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
 import de.metanome.algorithm_integration.algorithm_types.RelationalInputParameterAlgorithm;
@@ -27,7 +26,7 @@ public class MyUCCDetector extends MyUCCDetectorAlgorithm 				// Separating the 
 
 	@Override
 	public String getDescription() {
-		return "A test ucc algorithm with no real functionality"; // A string briefly describing what this algorithm does
+		return "a priori ucc algorithm"; // A string briefly describing what this algorithm does
 	}
 	
 	@Override

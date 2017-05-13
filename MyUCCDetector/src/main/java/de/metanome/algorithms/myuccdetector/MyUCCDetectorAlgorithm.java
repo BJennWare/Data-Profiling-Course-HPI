@@ -1,17 +1,14 @@
 package de.metanome.algorithms.myuccdetector;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
+import de.metanome.algorithm_helper.data_structures.ColumnCombinationBitset;
 import de.metanome.algorithm_integration.AlgorithmConfigurationException;
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
-import de.metanome.algorithm_integration.ColumnCombination;
-import de.metanome.algorithm_integration.ColumnIdentifier;
 import de.metanome.algorithm_integration.input.InputGenerationException;
 import de.metanome.algorithm_integration.input.InputIterationException;
 import de.metanome.algorithm_integration.input.RelationalInput;
@@ -80,119 +77,85 @@ public class MyUCCDetectorAlgorithm {
 	
 	protected List<UniqueColumnCombination> generateResults(List<List<String>> records) {
 		List<UniqueColumnCombination> results = new ArrayList<>();
-		List<List<Integer>> currentCandidates, negativeCandidates;
+		List<ColumnCombinationBitset> currentCandidates, negativeCandidates;
 		
 		//create initial candidates
 		currentCandidates = new ArrayList<>();
 		for(int i = 0; i < columnNames.size(); i++){
-			List<Integer> candidate = new ArrayList<>();
-			candidate.add(i);
+			ColumnCombinationBitset candidate = new ColumnCombinationBitset();
+			candidate.addColumn(i);
 			currentCandidates.add(candidate);
 		}
 		
 		//a priori algorithm
 		while(!currentCandidates.isEmpty()){
-			System.out.println("candidates: " + currentCandidates);
+			System.out.print("candidates: ");
+			printCandidateList(currentCandidates);
+			
 			negativeCandidates = new ArrayList<>();
-			for(List<Integer> candidate:currentCandidates){
+			for(ColumnCombinationBitset candidate:currentCandidates){
 				if(checkCCUniqueness(records, candidate)){
-					UniqueColumnCombination ucc = new UniqueColumnCombination(getColumnIdentifiers(candidate));
+					UniqueColumnCombination ucc = new UniqueColumnCombination(candidate.createColumnCombination(relationName, columnNames));
 					results.add(ucc);
 				}
 				else{
 					negativeCandidates.add(candidate);
 				}
 			}
-			System.out.println("negative candidates: " + negativeCandidates);
+			
+			System.out.print("negative candidates: ");
+			printCandidateList(negativeCandidates);
 			
 			currentCandidates = createNextCandidates(negativeCandidates);
 			pruneCandidates(currentCandidates, negativeCandidates);
 		}
 		
-		
-		
-//		for(long combinationNumber = 0; combinationNumber < Math.pow(2, columnNames.size()); combinationNumber++){
-//			List<Integer> columnCombination = new ArrayList<>();
-//			for(int i = 0; i < columnNames.size(); i++){
-//				if((combinationNumber & (1l << i)) != 0){
-//					columnCombination.add(i);
-//				}
-//			}
-//			
-//			if(checkCCUniqueness(records, columnCombination)){
-//				UniqueColumnCombination ucc = new UniqueColumnCombination(getColumnIdentifiers(columnCombination));
-//				results.add(ucc);
-//			}
-//		}
 		return results;
 	}
 
-	private List<List<Integer>> createNextCandidates(List<List<Integer>> currentCandidates) {
-		Set<List<Integer>> mergedCandidates = new HashSet<>();
+	private void printCandidateList(List<ColumnCombinationBitset> candidates) {
+		for(int i = 0; i < candidates.size(); i++){
+			ColumnCombinationBitset candidate = candidates.get(i);
+			System.out.print(candidate.toString().substring(24));
+			if(i != candidates.size() - 1){
+				System.out.print(", ");
+			}
+		}
+		System.out.println();
+	}
+
+	private List<ColumnCombinationBitset> createNextCandidates(List<ColumnCombinationBitset> currentCandidates) {
+		Set<ColumnCombinationBitset> mergedCandidates = new HashSet<>();
 		for(int i = 0; i < currentCandidates.size(); i++){
 			for(int j = i + 1; j < currentCandidates.size(); j++){
-				List<Integer> mergedCandidate = mergeCandidates(currentCandidates.get(i), currentCandidates.get(j));
-				if(mergedCandidate.size() == currentCandidates.get(i).size() + 1 ){
+				ColumnCombinationBitset mergedCandidate = mergeCandidates(currentCandidates.get(i), currentCandidates.get(j));
+				if(mergedCandidate.getSetBits().size() == currentCandidates.get(i).getSetBits().size() + 1 ){
 					mergedCandidates.add(mergedCandidate);
 				}
 			}
 		}
-		return new ArrayList<List<Integer>>(mergedCandidates);
+		return new ArrayList<ColumnCombinationBitset>(mergedCandidates);
 	}
 
-	private List<Integer> mergeCandidates(List<Integer> candidate1, List<Integer> candidate2) {
-		List<Integer> mergedCandidate = new ArrayList<>();
-		for(int i= 0, j = 0; i < candidate1.size() || j < candidate2.size();){
-			if(i < candidate1.size() && (j >= candidate2.size() || candidate1.get(i) < candidate2.get(j))){
-				mergedCandidate.add(candidate1.get(i));
-				i++;
-			}
-			else if(j < candidate2.size() && (i >= candidate1.size() || candidate2.get(j) < candidate1.get(i))){
-				mergedCandidate.add(candidate2.get(j));
-				j++;
-			}
-			else{
-				mergedCandidate.add(candidate1.get(i));
-				i++;
-				j++;
-			}
-		}
-		System.out.println("candidate 1:\t\t" + candidate1);
-		System.out.println("candidate 2:\t\t" + candidate2);
-		System.out.println("merged candidate:\t" + mergedCandidate);
-		return mergedCandidate;
+	private ColumnCombinationBitset mergeCandidates(ColumnCombinationBitset candidate1, ColumnCombinationBitset candidate2) {
+		return candidate1.union(candidate2);
 	}
 	
-	private void pruneCandidates(List<List<Integer>> currentCandidates, List<List<Integer>> negativeCandidates) {
-		Set<List<Integer>> negativeCandidateSet = new HashSet<>(negativeCandidates);
-		for(Iterator<List<Integer>> it = currentCandidates.iterator(); it.hasNext();){
-			List<Integer> candidate = it.next();
-			for(int i = 0; i < candidate.size(); i++){
-				List<Integer> projection = new ArrayList<>(candidate);
-				projection.remove(i);
+	private void pruneCandidates(List<ColumnCombinationBitset> currentCandidates, List<ColumnCombinationBitset> negativeCandidates) {
+		Set<ColumnCombinationBitset> negativeCandidateSet = new HashSet<>(negativeCandidates);
+		for(Iterator<ColumnCombinationBitset> it = currentCandidates.iterator(); it.hasNext();){
+			ColumnCombinationBitset candidate = it.next();
+			for(ColumnCombinationBitset projection:candidate.getDirectSubsets()){
 				if(!negativeCandidateSet.contains(projection)){
-					System.out.println("pruning " + candidate);
+					System.out.println("pruning " + candidate.toString().substring(24));
 					it.remove();
 					break;
 				}
 			}
 		}
 	}
-
-	private ColumnIdentifier[] getColumnIdentifiers(List<Integer> columnCombination) {
-		ColumnIdentifier[] identifiers = new ColumnIdentifier[columnCombination.size()];
-		for(int i = 0; i < columnCombination.size(); i++){
-			identifiers[i] = new ColumnIdentifier(this.relationName, this.columnNames.get(columnCombination.get(i)));
-		}
-		return identifiers;
-	}
-
-	protected ColumnIdentifier getRandomColumn() {
-		Random random = new Random(System.currentTimeMillis());
-		return new ColumnIdentifier(this.relationName, this.columnNames.get(random.nextInt(this.columnNames.size())));
-	}
 	
-	protected boolean checkCCUniqueness(List<List<String>> records, List<Integer> columnCombination){
+	protected boolean checkCCUniqueness(List<List<String>> records, ColumnCombinationBitset columnCombination){
 		Set<List<String>> uniqueValues = new HashSet<>();
 		
 		for(List<String> row:records){
@@ -205,9 +168,9 @@ public class MyUCCDetectorAlgorithm {
 		return true;
 	}
 
-	private List<String> getProjection(List<String> row, List<Integer> columnNumbers) {
+	private List<String> getProjection(List<String> row, ColumnCombinationBitset columnNumbers) {
 		List<String> projection = new ArrayList<>();
-		for(int column:columnNumbers){
+		for(int column:columnNumbers.getSetBits()){
 			projection.add(row.get(column));
 		}
 		return projection;
