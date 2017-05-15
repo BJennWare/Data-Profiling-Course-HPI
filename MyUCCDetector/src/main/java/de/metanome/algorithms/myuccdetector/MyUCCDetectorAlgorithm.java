@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Set;
 
 import de.metanome.algorithm_helper.data_structures.ColumnCombinationBitset;
+import de.metanome.algorithm_helper.data_structures.PLIBuilder;
+import de.metanome.algorithm_helper.data_structures.PositionListIndex;
 import de.metanome.algorithm_integration.AlgorithmConfigurationException;
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
 import de.metanome.algorithm_integration.input.InputGenerationException;
@@ -38,13 +40,15 @@ public class MyUCCDetectorAlgorithm {
         // Initialize
         this.initialize();
         // Read input data
-        List<List<String>> records = this.readInput();
+//        List<List<String>> records = this.readInput();
+        RelationalInput records = this.readInput();
+        List<PositionListIndex> indices = this.buildPLI(records);
 
         // Print what the algorithm read (to test that everything works)
-        if (mode.equals(MODE.Debug)) this.prettyPrint(records);
+        if (mode.equals(MODE.Debug)) this.prettyPrint(this.readInput());
 
         // Generate some results (usually, the algorithm should really calculate them on the data)
-        List<UniqueColumnCombination> results = this.generateResults(records);
+        List<UniqueColumnCombination> results = this.generateResults(indices);
 
         // To test if the algorithm outputs results
         this.emit(results);
@@ -58,12 +62,13 @@ public class MyUCCDetectorAlgorithm {
         this.columnNames = input.columnNames();
     }
 
-    protected List<List<String>> readInput() throws InputGenerationException, AlgorithmConfigurationException, InputIterationException {
+    protected RelationalInput readInput() throws InputGenerationException, AlgorithmConfigurationException, InputIterationException {
         List<List<String>> records = new ArrayList<>();
-        RelationalInput input = this.inputGenerator.generateNewCopy();
-        while (input.hasNext())
-            records.add(input.next());
-        return records;
+        return this.inputGenerator.generateNewCopy();
+    }
+
+    protected List<PositionListIndex> buildPLI(RelationalInput input) throws InputIterationException {
+        return new PLIBuilder(input, false).getPLIList();
     }
 
     protected void print(List<List<String>> records) {
@@ -82,8 +87,12 @@ public class MyUCCDetectorAlgorithm {
         }
     }
 
-    protected void prettyPrint(List<List<String>> records) {
+    protected void prettyPrint(RelationalInput input) throws InputIterationException {
         // Print schema
+        List<List<String>> records = new ArrayList<>();
+        while (input.hasNext())
+            records.add(input.next());
+
         System.out.println(this.relationName + ":");
 
         int[] maxCellLength = new int[records.get(0).size()];
@@ -92,7 +101,7 @@ public class MyUCCDetectorAlgorithm {
             maxCellLength[i] = columnName.length();
             i++;
         }
-        for (List<String> record : records) {
+        for (List<String> record: records) {
             i = 0;
             for (String value : record) {
                 maxCellLength[i] = Math.max(maxCellLength[i], value.length());
@@ -128,7 +137,7 @@ public class MyUCCDetectorAlgorithm {
         }
     }
 
-    protected List<UniqueColumnCombination> generateResults(List<List<String>> records) {
+    protected List<UniqueColumnCombination> generateResults(List<PositionListIndex> records) {
         List<UniqueColumnCombination> results = new ArrayList<>();
         List<ColumnCombinationBitset> currentCandidates, negativeCandidates;
         BitsetPrefixTreeNode prefixTree = new BitsetPrefixTreeNode(0, columnNames.size());
@@ -214,25 +223,26 @@ public class MyUCCDetectorAlgorithm {
         }
     }
 
-    protected boolean checkCCUniqueness(List<List<String>> records, ColumnCombinationBitset columnCombination) {
+    protected boolean checkCCUniqueness(List<PositionListIndex> records, ColumnCombinationBitset columnCombination) {
         Set<List<String>> uniqueValues = new HashSet<>();
 
-        for (List<String> row : records) {
-            List<String> projection = getProjection(row, columnCombination);
-            if (!uniqueValues.add(projection)) {
-                return false;
-            }
-        }
+        PositionListIndex index = getProjection(records, columnCombination);
+//        for(LongArrayList cluster : index.getClusters()){
+//            if(cluster.size() > 1) return false;
+//        }
 
-        return true;
+//        return true;
+
+        return index.isUnique();
     }
 
-    private List<String> getProjection(List<String> row, ColumnCombinationBitset columnNumbers) {
-        List<String> projection = new ArrayList<>();
-        for (int column : columnNumbers.getSetBits()) {
-            projection.add(row.get(column));
+    private PositionListIndex getProjection(List<PositionListIndex> row, ColumnCombinationBitset columnNumbers) {
+        PositionListIndex index = null;
+        for (int i : columnNumbers.getSetBits()) {
+            if (index == null) index = row.get(i);
+            else index = index.intersect(row.get(i));
         }
-        return projection;
+        return index;
     }
 
     protected void emit(List<UniqueColumnCombination> results) throws CouldNotReceiveResultException, ColumnNameMismatchException {
