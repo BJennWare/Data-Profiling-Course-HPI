@@ -37,14 +37,9 @@ public class MyUCCDetector extends MyUCCDetectorAlgorithm 				// Separating the 
 	}
 
 	@Override
-	public void setRelationalInputConfigurationValue(String identifier, RelationalInputGenerator... values) throws AlgorithmConfigurationException {
-		if (!MyUCCDetector.Identifier.INPUT_GENERATOR.name().equals(identifier))
-			this.handleUnknownConfiguration(identifier, values);
-		this.inputGenerator = values[0];
-	}
-
-	@Override
 	public void execute() throws AlgorithmExecutionException {
+//		mode = MODE.Performance;
+		mode = MODE.Debug;
 		super.execute();
 	}
 
@@ -63,6 +58,17 @@ public class MyUCCDetector extends MyUCCDetectorAlgorithm 				// Separating the 
 				buffer.append(separator);
 		}
 		return buffer.toString();
+	}
+
+	////////////////////////////////////////////////
+	// input and receiver implementations
+	////////////////////////////////////////////////
+
+	@Override
+	public void setRelationalInputConfigurationValue(String identifier, RelationalInputGenerator... values) throws AlgorithmConfigurationException {
+		if (!MyUCCDetector.Identifier.INPUT_GENERATOR.name().equals(identifier))
+			this.handleUnknownConfiguration(identifier, values);
+		this.inputGenerator = values[0];
 	}
 
 	@Override
