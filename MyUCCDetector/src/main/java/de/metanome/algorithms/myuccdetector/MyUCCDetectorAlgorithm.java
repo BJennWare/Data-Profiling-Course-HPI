@@ -78,6 +78,7 @@ public class MyUCCDetectorAlgorithm {
 	protected List<UniqueColumnCombination> generateResults(List<List<String>> records) {
 		List<UniqueColumnCombination> results = new ArrayList<>();
 		List<ColumnCombinationBitset> currentCandidates, negativeCandidates;
+		BitsetPrefixTreeNode prefixTree = new BitsetPrefixTreeNode(0, columnNames.size());
 		
 		//create initial candidates
 		currentCandidates = new ArrayList<>();
@@ -103,11 +104,15 @@ public class MyUCCDetectorAlgorithm {
 				}
 			}
 			
+			prefixTree.addBitsets(negativeCandidates);
+			
 			System.out.print("negative candidates: ");
 			printCandidateList(negativeCandidates);
+//			System.out.print("prefix tree: ");
+//			System.out.println(prefixTree);
 			
-			currentCandidates = createNextCandidates(negativeCandidates);
-			pruneCandidates(currentCandidates, negativeCandidates);
+			currentCandidates = createNextCandidates(negativeCandidates, prefixTree);
+			pruneCandidates(currentCandidates, prefixTree);
 		}
 		
 		return results;
@@ -124,29 +129,31 @@ public class MyUCCDetectorAlgorithm {
 		System.out.println();
 	}
 
-	private List<ColumnCombinationBitset> createNextCandidates(List<ColumnCombinationBitset> currentCandidates) {
-		Set<ColumnCombinationBitset> mergedCandidates = new HashSet<>();
-		for(int i = 0; i < currentCandidates.size(); i++){
-			for(int j = i + 1; j < currentCandidates.size(); j++){
-				ColumnCombinationBitset mergedCandidate = mergeCandidates(currentCandidates.get(i), currentCandidates.get(j));
-				if(mergedCandidate.getSetBits().size() == currentCandidates.get(i).getSetBits().size() + 1 ){
-					mergedCandidates.add(mergedCandidate);
+	private List<ColumnCombinationBitset> createNextCandidates(List<ColumnCombinationBitset> candidates, BitsetPrefixTreeNode prefixTree) {
+		List<ColumnCombinationBitset> mergedCandidates = new ArrayList<>();
+		for(ColumnCombinationBitset candidate:candidates){
+			BitsetPrefixTreeNode parentNode = prefixTree.getContainingNode(candidate).getParent();
+			int startIndex = candidate.getSetBits().get(candidate.size() - 1) + 1;
+			
+			BitsetPrefixTreeNode[] childrenNodes = parentNode.getChildren();
+			for(int i = startIndex; i < childrenNodes.length; i++){
+				if(childrenNodes[i] != null){
+					mergedCandidates.add(mergeCandidates(candidate, childrenNodes[i].getValue()));
 				}
 			}
 		}
-		return new ArrayList<ColumnCombinationBitset>(mergedCandidates);
+		return mergedCandidates;
 	}
 
 	private ColumnCombinationBitset mergeCandidates(ColumnCombinationBitset candidate1, ColumnCombinationBitset candidate2) {
 		return candidate1.union(candidate2);
 	}
 	
-	private void pruneCandidates(List<ColumnCombinationBitset> currentCandidates, List<ColumnCombinationBitset> negativeCandidates) {
-		Set<ColumnCombinationBitset> negativeCandidateSet = new HashSet<>(negativeCandidates);
+	private void pruneCandidates(List<ColumnCombinationBitset> currentCandidates, BitsetPrefixTreeNode prefixTree) {
 		for(Iterator<ColumnCombinationBitset> it = currentCandidates.iterator(); it.hasNext();){
 			ColumnCombinationBitset candidate = it.next();
 			for(ColumnCombinationBitset projection:candidate.getDirectSubsets()){
-				if(!negativeCandidateSet.contains(projection)){
+				if(!prefixTree.containsBitset(projection)){
 					System.out.println("pruning " + candidate.toString().substring(24));
 					it.remove();
 					break;
