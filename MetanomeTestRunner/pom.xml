@@ -37,8 +37,8 @@
 
   <dependencies>
     <dependency>
-      <groupId>de.metanome.algorithms.myoddetector</groupId>
-      <artifactId>MyOdDetector</artifactId>
+      <groupId>de.metanome.algorithms.myuccdetector</groupId>
+      <artifactId>MyUCCDetector</artifactId>
       <version>${metanome.version}</version>
     </dependency>
     

@@ -5,7 +5,7 @@ import java.io.File;
 public class Config {
 
 	public enum Algorithm {
-		MYODDETECTOR
+		MYUCCDETECTOR
 	}
 	
 	public enum Dataset {
@@ -69,7 +69,7 @@ public class Config {
 	}
 	
 	public Config() {
-		this(Config.Algorithm.MYODDETECTOR, Config.Dataset.PLANETS);
+		this(Config.Algorithm.MYUCCDETECTOR, Config.Dataset.PLANETS);
 	}
 
 	public Config(Config.Algorithm algorithm, Config.Dataset dataset) {
