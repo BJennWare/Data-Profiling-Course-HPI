@@ -1,11 +1,5 @@
 package de.metanome.algorithms.myuccdetector;
 
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
-
 import de.metanome.algorithm_helper.data_structures.ColumnCombinationBitset;
 import de.metanome.algorithm_helper.data_structures.PLIBuilder;
 import de.metanome.algorithm_helper.data_structures.PositionListIndex;
@@ -19,6 +13,9 @@ import de.metanome.algorithm_integration.result_receiver.ColumnNameMismatchExcep
 import de.metanome.algorithm_integration.result_receiver.CouldNotReceiveResultException;
 import de.metanome.algorithm_integration.result_receiver.UniqueColumnCombinationResultReceiver;
 import de.metanome.algorithm_integration.results.UniqueColumnCombination;
+import javafx.util.Pair;
+
+import java.util.*;
 
 public class MyUCCDetectorAlgorithm {
 
@@ -101,7 +98,7 @@ public class MyUCCDetectorAlgorithm {
             maxCellLength[i] = columnName.length();
             i++;
         }
-        for (List<String> record: records) {
+        for (List<String> record : records) {
             i = 0;
             for (String value : record) {
                 maxCellLength[i] = Math.max(maxCellLength[i], value.length());
@@ -139,7 +136,7 @@ public class MyUCCDetectorAlgorithm {
 
     protected List<UniqueColumnCombination> generateResults(List<PositionListIndex> records) {
         List<UniqueColumnCombination> results = new ArrayList<>();
-        List<ColumnCombinationBitset> currentCandidates, negativeCandidates;
+        List<Pair<ColumnCombinationBitset, PositionListIndex>> currentCandidates, negativeCandidates;
         BitsetPrefixTreeNode prefixTree = new BitsetPrefixTreeNode(0, columnNames.size());
 
         //create initial candidates
@@ -147,7 +144,7 @@ public class MyUCCDetectorAlgorithm {
         for (int i = 0; i < columnNames.size(); i++) {
             ColumnCombinationBitset candidate = new ColumnCombinationBitset();
             candidate.addColumn(i);
-            currentCandidates.add(candidate);
+            currentCandidates.add(new Pair<>(candidate, records.get(i)));
         }
 
         //a priori algorithm
@@ -156,9 +153,9 @@ public class MyUCCDetectorAlgorithm {
             printCandidateList(currentCandidates);
 
             negativeCandidates = new ArrayList<>();
-            for (ColumnCombinationBitset candidate : currentCandidates) {
-                if (checkCCUniqueness(records, candidate)) {
-                    UniqueColumnCombination ucc = new UniqueColumnCombination(candidate.createColumnCombination(relationName, columnNames));
+            for (Pair<ColumnCombinationBitset, PositionListIndex> candidate : currentCandidates) {
+                if (checkCCUniqueness(candidate.getValue())) {
+                    UniqueColumnCombination ucc = new UniqueColumnCombination(candidate.getKey().createColumnCombination(relationName, columnNames));
                     results.add(ucc);
                 } else {
                     negativeCandidates.add(candidate);
@@ -172,16 +169,16 @@ public class MyUCCDetectorAlgorithm {
 //			System.out.print("prefix tree: ");
 //			System.out.println(prefixTree);
 
-            currentCandidates = createNextCandidates(negativeCandidates, prefixTree);
-            pruneCandidates(currentCandidates, prefixTree);
+            List<ColumnCombinationBitset> bits = createNextCandidates(negativeCandidates, prefixTree);
+            currentCandidates = pruneCandidates(bits, prefixTree);
         }
 
         return results;
     }
 
-    private void printCandidateList(List<ColumnCombinationBitset> candidates) {
+    private void printCandidateList(List<Pair<ColumnCombinationBitset, PositionListIndex>> candidates) {
         for (int i = 0; i < candidates.size(); i++) {
-            ColumnCombinationBitset candidate = candidates.get(i);
+            ColumnCombinationBitset candidate = candidates.get(i).getKey();
             System.out.print(candidate.toString().substring(24));
             if (i != candidates.size() - 1) {
                 System.out.print(", ");
@@ -190,16 +187,16 @@ public class MyUCCDetectorAlgorithm {
         System.out.println();
     }
 
-    private List<ColumnCombinationBitset> createNextCandidates(List<ColumnCombinationBitset> candidates, BitsetPrefixTreeNode prefixTree) {
+    private List<ColumnCombinationBitset> createNextCandidates(List<Pair<ColumnCombinationBitset, PositionListIndex>> candidates, BitsetPrefixTreeNode prefixTree) {
         List<ColumnCombinationBitset> mergedCandidates = new ArrayList<>();
-        for (ColumnCombinationBitset candidate : candidates) {
-            BitsetPrefixTreeNode parentNode = prefixTree.getContainingNode(candidate).getParent();
-            int startIndex = candidate.getSetBits().get(candidate.size() - 1) + 1;
+        for (Pair<ColumnCombinationBitset, PositionListIndex> candidate : candidates) {
+            BitsetPrefixTreeNode parentNode = prefixTree.getContainingNode(candidate.getKey()).getParent();
+            int startIndex = candidate.getKey().getSetBits().get(candidate.getKey().size() - 1) + 1;
 
             BitsetPrefixTreeNode[] childrenNodes = parentNode.getChildren();
             for (int i = startIndex; i < childrenNodes.length; i++) {
                 if (childrenNodes[i] != null) {
-                    mergedCandidates.add(mergeCandidates(candidate, childrenNodes[i].getValue()));
+                    mergedCandidates.add(mergeCandidates(candidate.getKey(), childrenNodes[i].getBitset()));
                 }
             }
         }
@@ -210,29 +207,46 @@ public class MyUCCDetectorAlgorithm {
         return candidate1.union(candidate2);
     }
 
-    private void pruneCandidates(List<ColumnCombinationBitset> currentCandidates, BitsetPrefixTreeNode prefixTree) {
+    private List<Pair<ColumnCombinationBitset, PositionListIndex>> pruneCandidates(List<ColumnCombinationBitset> currentCandidates, BitsetPrefixTreeNode prefixTree) {
+        List<Pair<ColumnCombinationBitset, PositionListIndex>> pruned = new ArrayList<>();
+
         for (Iterator<ColumnCombinationBitset> it = currentCandidates.iterator(); it.hasNext(); ) {
             ColumnCombinationBitset candidate = it.next();
+            boolean buildPLI = true;
+            PositionListIndex smallest = null;
+            PositionListIndex secondSmallest = null;
             for (ColumnCombinationBitset projection : candidate.getDirectSubsets()) {
                 if (!prefixTree.containsBitset(projection)) {
                     System.out.println("pruning " + candidate.toString().substring(24));
                     it.remove();
+                    buildPLI = false;
                     break;
                 }
+
+                PositionListIndex index = prefixTree.getContainingNode(projection).getIndex();
+                if (smallest == null) {
+                    smallest = index;
+                } else if (secondSmallest == null) {
+                    if (smallest.size() > index.size()) {
+                        secondSmallest = smallest;
+                        smallest = index;
+                    } else secondSmallest = index;
+                } else if (index.size() < smallest.size()) {
+                    secondSmallest = smallest;
+                    smallest = index;
+                } else if (index.size() < secondSmallest.size()) {
+                    secondSmallest = index;
+                }
             }
+
+            if (buildPLI)
+                pruned.add(new Pair<ColumnCombinationBitset, PositionListIndex>(candidate, smallest.intersect(secondSmallest)));
         }
+
+        return pruned;
     }
 
-    protected boolean checkCCUniqueness(List<PositionListIndex> records, ColumnCombinationBitset columnCombination) {
-        Set<List<String>> uniqueValues = new HashSet<>();
-
-        PositionListIndex index = getProjection(records, columnCombination);
-//        for(LongArrayList cluster : index.getClusters()){
-//            if(cluster.size() > 1) return false;
-//        }
-
-//        return true;
-
+    protected boolean checkCCUniqueness(PositionListIndex index) {
         return index.isUnique();
     }
 
