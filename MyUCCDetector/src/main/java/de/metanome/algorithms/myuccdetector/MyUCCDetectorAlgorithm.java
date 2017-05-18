@@ -104,7 +104,12 @@ public class MyUCCDetectorAlgorithm {
         for (List<String> record: records) {
             i = 0;
             for (String value : record) {
-                maxCellLength[i] = Math.max(maxCellLength[i], value.length());
+            	if(value == null){
+            		maxCellLength[i] = Math.max(maxCellLength[i], "null".length());
+            	}
+            	else{
+            		maxCellLength[i] = Math.max(maxCellLength[i], value.length());
+            	}
                 i++;
             }
         }
@@ -127,7 +132,7 @@ public class MyUCCDetectorAlgorithm {
             System.out.print("| ");
             for (String value : record) {
                 System.out.print(value);
-                for (int k = 0; k < maxCellLength[i] - value.length(); k++)
+                for (int k = 0; k < (value != null ? maxCellLength[i] - value.length() : maxCellLength[i] - "null".length()) ; k++)
                     System.out.print(" ");
 
                 System.out.print(" | ");
