@@ -10,11 +10,11 @@
   </parent>
 
   <groupId>de.metanome.algorithms.myuccdetector</groupId>
-  <artifactId>MyUCCDetector</artifactId>
+  <artifactId>UCCDetectorBarkowskyFeldmann</artifactId>
   <version>${metanome.version}</version>
   <packaging>jar</packaging>
 
-  <name>MyUCCDetector</name>
+  <name>UCCDetectorBarkowskyFeldmann</name>
 
   <properties>
     <metanome.version>1.1-SNAPSHOT</metanome.version>
@@ -85,7 +85,7 @@
           <archive>
             <manifestEntries>
               <Algorithm-Bootstrap-Class>
-                de.metanome.algorithms.myuccdetector.MyUCCDetector
+                de.metanome.algorithms.myuccdetector.UCCDetectorBarkowskyFeldmann
               </Algorithm-Bootstrap-Class>
             </manifestEntries>
           </archive>

@@ -11,7 +11,7 @@ import de.metanome.algorithm_integration.configuration.ConfigurationRequirementR
 import de.metanome.algorithm_integration.input.RelationalInputGenerator;
 import de.metanome.algorithm_integration.result_receiver.UniqueColumnCombinationResultReceiver;
 
-public class MyUCCDetector extends MyUCCDetectorAlgorithm 				// Separating the algorithm implementation and the Metanome interface implementation is good practice
+public class UCCDetectorBarkowskyFeldmann extends UCCDetectorAlgorithmBarkowskyFeldmann 				// Separating the algorithm implementation and the Metanome interface implementation is good practice
 						  implements UniqueColumnCombinationsAlgorithm, // Defines the type of the algorithm, i.e., the result type, for instance, FunctionalDependencyAlgorithm or InclusionDependencyAlgorithm; implementing multiple types is possible
 						  			 RelationalInputParameterAlgorithm {	// Defines the input type of the algorithm; relational input is any relational input from files or databases; more specific input specifications are possible
 						  			 
@@ -32,7 +32,7 @@ public class MyUCCDetector extends MyUCCDetectorAlgorithm 				// Separating the 
 	@Override
 	public ArrayList<ConfigurationRequirement<?>> getConfigurationRequirements() { // Tells Metanome which and how many parameters the algorithm needs
 		ArrayList<ConfigurationRequirement<?>> conf = new ArrayList<>();
-		conf.add(new ConfigurationRequirementRelationalInput(MyUCCDetector.Identifier.INPUT_GENERATOR.name()));
+		conf.add(new ConfigurationRequirementRelationalInput(UCCDetectorBarkowskyFeldmann.Identifier.INPUT_GENERATOR.name()));
 		return conf;
 	}
 
@@ -66,7 +66,7 @@ public class MyUCCDetector extends MyUCCDetectorAlgorithm 				// Separating the 
 
 	@Override
 	public void setRelationalInputConfigurationValue(String identifier, RelationalInputGenerator... values) throws AlgorithmConfigurationException {
-		if (!MyUCCDetector.Identifier.INPUT_GENERATOR.name().equals(identifier))
+		if (!UCCDetectorBarkowskyFeldmann.Identifier.INPUT_GENERATOR.name().equals(identifier))
 			this.handleUnknownConfiguration(identifier, values);
 		this.inputGenerator = values[0];
 	}

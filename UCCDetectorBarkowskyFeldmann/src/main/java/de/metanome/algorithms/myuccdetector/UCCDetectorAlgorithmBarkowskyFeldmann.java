@@ -17,7 +17,7 @@ import javafx.util.Pair;
 
 import java.util.*;
 
-public class MyUCCDetectorAlgorithm {
+public class UCCDetectorAlgorithmBarkowskyFeldmann {
 
     protected RelationalInputGenerator inputGenerator = null;
     protected UniqueColumnCombinationResultReceiver resultReceiver = null;
