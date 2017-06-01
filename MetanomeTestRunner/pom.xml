@@ -38,9 +38,16 @@
   <dependencies>
     <dependency>
       <groupId>de.metanome.algorithms.myuccdetector</groupId>
-      <artifactId>MyUCCDetector</artifactId>
+      <artifactId>UCCDetectorBarkowskyFeldmann</artifactId>
       <version>${metanome.version}</version>
     </dependency>
+
+    <dependency>
+      <groupId>de.metanome.algorithms.myfddetector</groupId>
+      <artifactId>FDDetectorBarkowskyFeldmann</artifactId>
+      <version>1.1-SNAPSHOT</version>
+    </dependency>
+
     
     <dependency>
       <groupId>de.metanome</groupId>

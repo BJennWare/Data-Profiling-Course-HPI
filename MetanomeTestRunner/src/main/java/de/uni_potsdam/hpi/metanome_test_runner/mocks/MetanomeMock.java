@@ -1,10 +1,6 @@
 package de.uni_potsdam.hpi.metanome_test_runner.mocks;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
+import de.metanome.algorithm_integration.Algorithm;
 import de.metanome.algorithm_integration.AlgorithmConfigurationException;
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
 import de.metanome.algorithm_integration.ColumnIdentifier;
@@ -12,14 +8,19 @@ import de.metanome.algorithm_integration.configuration.ConfigurationSettingFileI
 import de.metanome.algorithm_integration.input.InputGenerationException;
 import de.metanome.algorithm_integration.input.RelationalInput;
 import de.metanome.algorithm_integration.input.RelationalInputGenerator;
-import de.metanome.algorithm_integration.results.OrderDependency;
 import de.metanome.algorithm_integration.results.Result;
 import de.metanome.algorithm_integration.results.UniqueColumnCombination;
-import de.metanome.algorithms.myuccdetector.MyUCCDetector;
+import de.metanome.algorithms.myfddetector.FDDetectorBarkowskyFeldmann;
+import de.metanome.algorithms.myuccdetector.UCCDetectorBarkowskyFeldmann;
 import de.metanome.backend.input.file.DefaultFileInputGenerator;
 import de.metanome.backend.result_receiver.ResultCache;
 import de.uni_potsdam.hpi.metanome_test_runner.config.Config;
 import de.uni_potsdam.hpi.metanome_test_runner.utils.FileUtils;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MetanomeMock {
 
@@ -33,9 +34,21 @@ public class MetanomeMock {
 
             ResultCache resultReceiver = new ResultCache("MetanomeMock", getAcceptedColumns(inputGenerator));
 
-            MyUCCDetector algorithm = new MyUCCDetector();
-            algorithm.setRelationalInputConfigurationValue(MyUCCDetector.Identifier.INPUT_GENERATOR.name(), inputGenerator);
-            algorithm.setResultReceiver(resultReceiver);
+            Algorithm algorithm = null;
+            switch (conf.algorithm) {
+                case MYUCCDETECTOR:
+                    algorithm = new UCCDetectorBarkowskyFeldmann();
+                    ((UCCDetectorBarkowskyFeldmann) algorithm).setRelationalInputConfigurationValue(UCCDetectorBarkowskyFeldmann.Identifier.INPUT_GENERATOR.name(), inputGenerator);
+                    ((UCCDetectorBarkowskyFeldmann) algorithm).setResultReceiver(resultReceiver);
+                    break;
+                case MYFDDETECTOR:
+                    algorithm = new FDDetectorBarkowskyFeldmann();
+                    ((FDDetectorBarkowskyFeldmann) algorithm).setRelationalInputConfigurationValue(FDDetectorBarkowskyFeldmann.Identifier.INPUT_GENERATOR.name(), inputGenerator);
+                    ((FDDetectorBarkowskyFeldmann) algorithm).setResultReceiver(resultReceiver);
+                    break;
+                default:
+                    throw new IllegalArgumentException("wrong algorithm");
+            }
 
             long runtime = System.currentTimeMillis();
             algorithm.execute();

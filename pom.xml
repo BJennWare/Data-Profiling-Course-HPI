@@ -11,7 +11,8 @@
 
     <modules>
         <module>MetanomeTestRunner</module>
-        <module>MyUCCDetector</module>
+        <module>UCCDetectorBarkowskyFeldmann</module>
+        <module>FDDetectorBarkowskyFeldmann</module>
     </modules>
 
 </project>
