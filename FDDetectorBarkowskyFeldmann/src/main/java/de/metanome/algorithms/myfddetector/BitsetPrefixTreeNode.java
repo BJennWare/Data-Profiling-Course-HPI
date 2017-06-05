@@ -4,13 +4,13 @@ import java.util.List;
 
 import de.metanome.algorithm_helper.data_structures.ColumnCombinationBitset;
 import de.metanome.algorithm_helper.data_structures.PositionListIndex;
-import javafx.util.Pair;
 
 public class BitsetPrefixTreeNode {
 
 	private int level;
 	private int columnNumber;
-	private Pair<ColumnCombinationBitset, PositionListIndex> bitsetIndex;
+	private Tuple<ColumnCombinationBitset, PositionListIndex> bitsetIndex;
+	private ColumnCombinationBitset candidateSet;
 	private BitsetPrefixTreeNode[] children;
 	private BitsetPrefixTreeNode parent;
 
@@ -49,16 +49,24 @@ public class BitsetPrefixTreeNode {
 		this.children = children;
 	}
 
-	public void setBitsetIndex(Pair<ColumnCombinationBitset, PositionListIndex> bitsetIndex) {
+	public void setBitsetIndex(Tuple<ColumnCombinationBitset, PositionListIndex> bitsetIndex) {
 		this.bitsetIndex = bitsetIndex;
 	}
 
 	public ColumnCombinationBitset getBitset() {
-		return bitsetIndex.getKey();
+		return bitsetIndex.e1;
+	}
+
+	public ColumnCombinationBitset getCandidateSet() {
+		return candidateSet;
+	}
+
+	public void setCandidateSet(ColumnCombinationBitset candidateSet) {
+		this.candidateSet = candidateSet;
 	}
 
 	public PositionListIndex getIndex() {
-		return bitsetIndex.getValue();
+		return bitsetIndex.e2;
 	}
 
 
@@ -70,14 +78,15 @@ public class BitsetPrefixTreeNode {
 		this.parent = parent;
 	}
 
-	public void addBitset(Pair<ColumnCombinationBitset, PositionListIndex> bitset){
+	public BitsetPrefixTreeNode addBitset(Tuple<ColumnCombinationBitset, PositionListIndex> bitset){
 	    // TODO: übergib auch posListId
-		addBitset(bitset, bitset.getKey().getSetBits());
+		return addBitset(bitset, bitset.e1.getSetBits());
 	}
 
-	protected void addBitset(Pair<ColumnCombinationBitset, PositionListIndex> bitset, List<Integer> columnIndices){
-		if(bitset.getKey().size() <= level){
+	protected BitsetPrefixTreeNode addBitset(Tuple<ColumnCombinationBitset, PositionListIndex> bitset, List<Integer> columnIndices){
+		if(bitset.e1.size() <= level){
 			setBitsetIndex(bitset);
+			return this;
 			// TODO:
 		}
 		else{
@@ -85,12 +94,12 @@ public class BitsetPrefixTreeNode {
 				children[columnIndices.get(level)] = new BitsetPrefixTreeNode(this, level + 1, columnNumber);
 			}
 			BitsetPrefixTreeNode child = children[columnIndices.get(level)];
-			child.addBitset(bitset, columnIndices);
+			return child.addBitset(bitset, columnIndices);
 		}
 	}
 
-	public void addBitsets(List<Pair<ColumnCombinationBitset, PositionListIndex>> bitsets){
-		for(Pair<ColumnCombinationBitset, PositionListIndex> bitset:bitsets){
+	public void addBitsets(List<Tuple<ColumnCombinationBitset, PositionListIndex>> bitsets){
+		for(Tuple<ColumnCombinationBitset, PositionListIndex> bitset:bitsets){
 			addBitset(bitset);
 		}
 	}
@@ -107,7 +116,7 @@ public class BitsetPrefixTreeNode {
 		if(bitset == null){
 			return null;
 		}
-		else if(bitset.size() <= level && bitset.equals(bitsetIndex.getKey())){
+		else if(bitset.size() <= level && bitset.equals(bitsetIndex.e1)){
 			return this;
 		}
 		else{

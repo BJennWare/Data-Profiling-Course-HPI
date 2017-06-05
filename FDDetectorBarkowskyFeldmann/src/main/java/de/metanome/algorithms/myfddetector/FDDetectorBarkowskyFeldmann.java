@@ -2,17 +2,17 @@ package de.metanome.algorithms.myfddetector;
 
 import de.metanome.algorithm_integration.AlgorithmConfigurationException;
 import de.metanome.algorithm_integration.AlgorithmExecutionException;
+import de.metanome.algorithm_integration.algorithm_types.FunctionalDependencyAlgorithm;
 import de.metanome.algorithm_integration.algorithm_types.RelationalInputParameterAlgorithm;
-import de.metanome.algorithm_integration.algorithm_types.UniqueColumnCombinationsAlgorithm;
 import de.metanome.algorithm_integration.configuration.ConfigurationRequirement;
 import de.metanome.algorithm_integration.configuration.ConfigurationRequirementRelationalInput;
 import de.metanome.algorithm_integration.input.RelationalInputGenerator;
-import de.metanome.algorithm_integration.result_receiver.UniqueColumnCombinationResultReceiver;
+import de.metanome.algorithm_integration.result_receiver.FunctionalDependencyResultReceiver;
 
 import java.util.ArrayList;
 
 public class FDDetectorBarkowskyFeldmann extends FDDetectorAlgorithmBarkowskyFeldmann                // Separating the algorithm implementation and the Metanome interface implementation is good practice
-        implements UniqueColumnCombinationsAlgorithm, // Defines the type of the algorithm, i.e., the result type, for instance, FunctionalDependencyAlgorithm or InclusionDependencyAlgorithm; implementing multiple types is possible
+        implements FunctionalDependencyAlgorithm, // Defines the type of the algorithm, i.e., the result type, for instance, FunctionalDependencyAlgorithm or InclusionDependencyAlgorithm; implementing multiple types is possible
         RelationalInputParameterAlgorithm {    // Defines the input type of the algorithm; relational input is any relational input from files or databases; more specific input specifications are possible
 
     public enum Identifier {
@@ -28,7 +28,7 @@ public class FDDetectorBarkowskyFeldmann extends FDDetectorAlgorithmBarkowskyFel
 
     @Override
     public String getDescription() {
-        return "a priori ucc algorithm"; // A string briefly describing what this algorithm does
+        return "a priori fd algorithm"; // A string briefly describing what this algorithm does
     }
 
     @Override
@@ -74,7 +74,7 @@ public class FDDetectorBarkowskyFeldmann extends FDDetectorAlgorithmBarkowskyFel
     }
 
     @Override
-    public void setResultReceiver(UniqueColumnCombinationResultReceiver resultReceiver) {
+    public void setResultReceiver(FunctionalDependencyResultReceiver resultReceiver) {
         this.resultReceiver = resultReceiver;
     }
 }
