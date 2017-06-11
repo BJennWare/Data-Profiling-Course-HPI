@@ -32,7 +32,7 @@ public class Config {
     public boolean inputFileHasHeader;
     public boolean inputFileSkipDifferingLines = true; // Skip lines that differ from the dataset's schema
 
-    public String measurementsFolderPath = "io" + File.separator + "measurements" + File.separator;
+    public String measurementsFolderPath = "MetanomeTestRunner" + File.separator + "io" + File.separator + "measurements" + File.separator;
 
     public String statisticsFileName = "statistics.txt";
     public String resultFileName = "results.txt";

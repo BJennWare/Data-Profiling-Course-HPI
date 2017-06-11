@@ -86,8 +86,7 @@ public class MetanomeMock {
     private static String format(List<Result> results) {
         StringBuilder builder = new StringBuilder();
         for (Result result : results) {
-            UniqueColumnCombination uc = (UniqueColumnCombination) result;
-            builder.append(uc.toString() + "\r\n");
+            builder.append(result.toString() + "\r\n");
         }
         return builder.toString();
     }
