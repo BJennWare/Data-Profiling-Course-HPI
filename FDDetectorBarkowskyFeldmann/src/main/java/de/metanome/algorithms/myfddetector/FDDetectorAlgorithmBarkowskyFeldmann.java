@@ -39,7 +39,7 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
         initialize();
         List<List<String>> records = this.readInput();
         List<PositionListIndex> indices = this.buildPLI(inputGenerator.generateNewCopy());
-        List<FunctionalDependency> results = this.generateResults(records, indices);
+        List<FunctionalDependency> results = this.generateResults(records.size(), indices);
         emit(results);
     }
 
@@ -62,7 +62,7 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
         return new PLIBuilder(input, false).getPLIList();
     }
 
-    protected List<FunctionalDependency> generateResults(List<List<String>> records, List<PositionListIndex> plis) {
+    protected List<FunctionalDependency> generateResults(int recordCount, List<PositionListIndex> plis) {
         List<FunctionalDependency> results = new ArrayList<>();
         List<Tuple<ColumnCombinationBitset, PositionListIndex>> currentCandidates, negativeCandidates;
         
@@ -102,7 +102,7 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
             		ColumnCombinationBitset lhs = new ColumnCombinationBitset(candidate.e1);
             		lhs.removeColumn(rhs);
             		
-                	if (checkFD(lhs, rhs, prefixTree, records)) {
+                	if (checkFD(lhs, rhs, prefixTree, recordCount, plis)) {
                 		FunctionalDependency fd = new FunctionalDependency(lhs.createColumnCombination(relationName, columnNames), new ColumnIdentifier(relationName, columnNames.get(rhs)));
                         results.add(fd);
                         
@@ -174,31 +174,24 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
             }
 
             if (buildPLI)
-                pruned.add(new Tuple<ColumnCombinationBitset, PositionListIndex>(candidate, smallest.intersect(secondSmallest)));
+                pruned.add(new Tuple<>(candidate, smallest.intersect(secondSmallest)));
         }
 
         return pruned;
     }
 
-    protected boolean checkFD(ColumnCombinationBitset lhs, int rhs, BitsetPrefixTreeNode prefixTree, List<List<String>>records) {
+    protected boolean checkFD(ColumnCombinationBitset lhs, int rhs, BitsetPrefixTreeNode prefixTree, int recordCount, List<PositionListIndex> plis) {
     	if(lhs.size() < 1){
     		return false;
     	}
     	
     	PositionListIndex pli = prefixTree.getContainingNode(lhs).getIndex();
-        for(LongArrayList cluster:pli.getClusters()){
-        	String reference = null;
-        	for(long tupleIndex:cluster){
-        		String value = records.get((int) tupleIndex).get(rhs);
-        		if(reference == null){
-        			reference = value;
-        		}
-        		else if(!value.equals(reference)){
-        			return false;
-        		}
-        	}
-        }
-    	return true;
+
+        return keyError(pli, recordCount) == keyError(plis.get(rhs).intersect(pli), recordCount);
+    }
+
+    protected float keyError(PositionListIndex index, int r){
+        return index.getRawKeyError() / (float) r;
     }
 
     protected void emit(List<FunctionalDependency> results) throws CouldNotReceiveResultException, ColumnNameMismatchException {
