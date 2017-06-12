@@ -14,7 +14,6 @@ import de.metanome.algorithm_integration.result_receiver.ColumnNameMismatchExcep
 import de.metanome.algorithm_integration.result_receiver.CouldNotReceiveResultException;
 import de.metanome.algorithm_integration.result_receiver.FunctionalDependencyResultReceiver;
 import de.metanome.algorithm_integration.results.FunctionalDependency;
-import it.unimi.dsi.fastutil.longs.LongArrayList;
 
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -37,9 +36,9 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
         // THE DISCOVERY ALGORITHM LIVES HERE :-) //
         ////////////////////////////////////////////
         initialize();
-        List<List<String>> records = this.readInput();
+        long recordNumber = this.countInput();
         List<PositionListIndex> indices = this.buildPLI(inputGenerator.generateNewCopy());
-        List<FunctionalDependency> results = this.generateResults(records.size(), indices);
+        List<FunctionalDependency> results = this.generateResults(recordNumber, indices);
         emit(results);
     }
 
@@ -49,20 +48,21 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
         this.columnNames = input.columnNames();
     }
 
-    protected List<List<String>> readInput() throws InputGenerationException, AlgorithmConfigurationException, InputIterationException {
-    	 List<List<String>> records = new ArrayList<>();
-        RelationalInput input = inputGenerator.generateNewCopy();
+    protected long countInput() throws InputGenerationException, AlgorithmConfigurationException, InputIterationException {
+    	RelationalInput input = inputGenerator.generateNewCopy();
+        long count = 0;
         while(input.hasNext()){
-        	records.add(input.next());
+        	input.next();
+        	count++;
         }
-        return records;
+        return count;
     }
 
     protected List<PositionListIndex> buildPLI(RelationalInput input) throws InputIterationException {
-        return new PLIBuilder(input, false).getPLIList();
+        return new PLIBuilder(input, true).getPLIList();
     }
 
-    protected List<FunctionalDependency> generateResults(int recordCount, List<PositionListIndex> plis) {
+    protected List<FunctionalDependency> generateResults(long recordCount, List<PositionListIndex> plis) {
         List<FunctionalDependency> results = new ArrayList<>();
         List<Tuple<ColumnCombinationBitset, PositionListIndex>> currentCandidates, negativeCandidates;
         
@@ -85,24 +85,15 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
         	negativeCandidates = new ArrayList<>();
         	
             for (Tuple<ColumnCombinationBitset, PositionListIndex> candidate : currentCandidates) {
-            	ColumnCombinationBitset candidateSet = null;
-            	for(ColumnCombinationBitset subset:candidate.e1.getDirectSubsets()){
-            		ColumnCombinationBitset subsetCandidateSet = prefixTree.getContainingNode(subset).getCandidateSet();
-            		if(candidateSet == null){
-            			candidateSet = subsetCandidateSet;
-            		}
-            		else{
-            			candidateSet = candidateSet.intersect(subsetCandidateSet);
-            		}
-            	}
-            	
+            	ColumnCombinationBitset candidateSet = createCandidateSet(candidate.e1, prefixTree);
             	ColumnCombinationBitset candidateRhs = candidate.e1.intersect(candidateSet);
             	
+            	//check all candidate RHSs
             	for(int rhs:candidateRhs.getSetBits()){
             		ColumnCombinationBitset lhs = new ColumnCombinationBitset(candidate.e1);
             		lhs.removeColumn(rhs);
             		
-                	if (checkFD(lhs, rhs, prefixTree, recordCount, plis)) {
+                	if (checkFD(lhs, rhs, prefixTree.getContainingNode(lhs).getIndex(), candidate.e2, recordCount)) {
                 		FunctionalDependency fd = new FunctionalDependency(lhs.createColumnCombination(relationName, columnNames), new ColumnIdentifier(relationName, columnNames.get(rhs)));
                         results.add(fd);
                         
@@ -111,21 +102,35 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
                     }
                 }
             	
+            	//only continue with candidate if it cannot be pruned
             	if(!candidateSet.isEmpty()){
             		negativeCandidates.add(candidate);
                 	BitsetPrefixTreeNode containingNode = prefixTree.addBitset(candidate);
                 	containingNode.setCandidateSet(candidateSet);
             	}
             }
-
-            List<ColumnCombinationBitset> bits = createNextCandidates(negativeCandidates, prefixTree);
-            currentCandidates = pruneCandidates(bits, prefixTree);
+            
+            currentCandidates = createNextCandidates(negativeCandidates, prefixTree);
         }
 
         return results;
     }
 
-    private List<ColumnCombinationBitset> createNextCandidates(List<Tuple<ColumnCombinationBitset, PositionListIndex>> candidates, BitsetPrefixTreeNode prefixTree) {
+    private ColumnCombinationBitset createCandidateSet(ColumnCombinationBitset candidate, BitsetPrefixTreeNode prefixTree) {
+    	ColumnCombinationBitset candidateSet = null;
+    	for(ColumnCombinationBitset subset:candidate.getDirectSubsets()){
+    		ColumnCombinationBitset subsetCandidateSet = prefixTree.getContainingNode(subset).getCandidateSet();
+    		if(candidateSet == null){
+    			candidateSet = subsetCandidateSet;
+    		}
+    		else{
+    			candidateSet = candidateSet.intersect(subsetCandidateSet);
+    		}
+    	}
+    	return candidateSet;
+	}
+
+	private List<Tuple<ColumnCombinationBitset, PositionListIndex>> createNextCandidates(List<Tuple<ColumnCombinationBitset, PositionListIndex>> candidates, BitsetPrefixTreeNode prefixTree) {
         List<ColumnCombinationBitset> mergedCandidates = new ArrayList<>();
         for (Tuple<ColumnCombinationBitset, PositionListIndex> candidate : candidates) {
             BitsetPrefixTreeNode parentNode = prefixTree.getContainingNode(candidate.e1).getParent();
@@ -138,7 +143,9 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
                 }
             }
         }
-        return mergedCandidates;
+        
+        List<Tuple<ColumnCombinationBitset, PositionListIndex>> prunedCandidates = pruneCandidates(mergedCandidates, prefixTree);
+        return prunedCandidates;
     }
 
     private List<Tuple<ColumnCombinationBitset, PositionListIndex>> pruneCandidates(List<ColumnCombinationBitset> currentCandidates, BitsetPrefixTreeNode prefixTree) {
@@ -151,7 +158,6 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
             PositionListIndex secondSmallest = null;
             for (ColumnCombinationBitset projection : candidate.getDirectSubsets()) {
                 if (!prefixTree.containsBitset(projection)) {
-                    System.out.println("pruning " + candidate.toString().substring(24));
                     it.remove();
                     buildPLI = false;
                     break;
@@ -180,25 +186,18 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
         return pruned;
     }
 
-    protected boolean checkFD(ColumnCombinationBitset lhs, int rhs, BitsetPrefixTreeNode prefixTree, int recordCount, List<PositionListIndex> plis) {
+    protected boolean checkFD(ColumnCombinationBitset lhs, int rhs, PositionListIndex pliLhs, PositionListIndex pliFull, long recordCount) {
     	if(lhs.size() < 1){
-    		return false;
+    		return pliFull.getRawKeyError() == recordCount - 1;
     	}
     	
-    	PositionListIndex pli = prefixTree.getContainingNode(lhs).getIndex();
-
-        return keyError(pli, recordCount) == keyError(plis.get(rhs).intersect(pli), recordCount);
-    }
-
-    protected float keyError(PositionListIndex index, int r){
-        return index.getRawKeyError() / (float) r;
+        return pliLhs.getRawKeyError() == pliFull.getRawKeyError();	//TODO intersect for each candidate rhs?? why not create whole PLI first and hand it to this method?
     }
 
     protected void emit(List<FunctionalDependency> results) throws CouldNotReceiveResultException, ColumnNameMismatchException {
         for (FunctionalDependency fd : results)
             this.resultReceiver.receiveResult(fd);
     }
-
 
     protected void print(List<List<String>> records) {
         // Print schema
