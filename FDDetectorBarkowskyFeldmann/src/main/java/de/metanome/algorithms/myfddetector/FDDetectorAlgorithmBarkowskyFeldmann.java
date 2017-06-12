@@ -16,8 +16,10 @@ import de.metanome.algorithm_integration.result_receiver.FunctionalDependencyRes
 import de.metanome.algorithm_integration.results.FunctionalDependency;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 
 public class FDDetectorAlgorithmBarkowskyFeldmann {
 
@@ -83,7 +85,8 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
         //a priori algorithm
         while (!currentCandidates.isEmpty()) {
         	negativeCandidates = new ArrayList<>();
-        	
+        	Map<ColumnCombinationBitset, ColumnCombinationBitset> levelCandidateSets = new HashMap<>();
+            
             for (Tuple<ColumnCombinationBitset, PositionListIndex> candidate : currentCandidates) {
             	ColumnCombinationBitset candidateSet = createCandidateSet(candidate.e1, prefixTree);
             	ColumnCombinationBitset candidateRhs = candidate.e1.intersect(candidateSet);
@@ -102,12 +105,51 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
                     }
                 }
             	
-            	//only continue with candidate if it cannot be pruned
-            	if(!candidateSet.isEmpty()){
-            		negativeCandidates.add(candidate);
-                	BitsetPrefixTreeNode containingNode = prefixTree.addBitset(candidate);
-                	containingNode.setCandidateSet(candidateSet);
-            	}
+            	levelCandidateSets.put(candidate.e1, candidateSet);
+            }
+            
+            //prune candidates with empty candidate sets and keys
+            for (Tuple<ColumnCombinationBitset, PositionListIndex> candidate : currentCandidates) {
+	            
+            	//check if the candidate can be pruned
+	        	boolean pruned = false;
+	        	ColumnCombinationBitset candidateSet = levelCandidateSets.get(candidate.e1);
+	        	
+	        	if(candidateSet.isEmpty()){
+	        		pruned = true;
+	        	}
+	        	
+	        	if(candidate.e2.isUnique()){
+	        		pruned = true;
+	        		
+	        		ColumnCombinationBitset candidateFDs = candidateSet.minus(candidate.e1);
+	        		
+	        		for(int candidateFD:candidateFDs.getSetBits()){
+	        			boolean emit = true;
+	        			
+	        			for(ColumnCombinationBitset subset:candidate.e1.getDirectSubsets()){
+	        				subset.addColumn(candidateFD);
+	        				
+	        				ColumnCombinationBitset subsetCandidateSet = levelCandidateSets.get(subset);
+	        				if(subsetCandidateSet != null && !subsetCandidateSet.containsColumn(candidateFD)){
+	        					emit = false;
+			        			break;
+			        		}
+	        			}
+	        			
+	        			if(emit){
+	        				FunctionalDependency fd = new FunctionalDependency(candidate.e1.createColumnCombination(relationName, columnNames), new ColumnIdentifier(relationName, columnNames.get(candidateFD)));
+	                        results.add(fd);
+	        			}
+	        		}
+	        	}
+	        	
+	        	//only consider candidate if it could not be pruned
+	        	if(!pruned){
+	        		negativeCandidates.add(candidate);
+	        		BitsetPrefixTreeNode containingNode = prefixTree.addBitset(candidate);
+	            	containingNode.setCandidateSet(candidateSet);
+	            }
             }
             
             currentCandidates = createNextCandidates(negativeCandidates, prefixTree);
@@ -191,7 +233,7 @@ public class FDDetectorAlgorithmBarkowskyFeldmann {
     		return pliFull.getRawKeyError() == recordCount - 1;
     	}
     	
-        return pliLhs.getRawKeyError() == pliFull.getRawKeyError();	//TODO intersect for each candidate rhs?? why not create whole PLI first and hand it to this method?
+        return pliLhs.getRawKeyError() == pliFull.getRawKeyError();
     }
 
     protected void emit(List<FunctionalDependency> results) throws CouldNotReceiveResultException, ColumnNameMismatchException {

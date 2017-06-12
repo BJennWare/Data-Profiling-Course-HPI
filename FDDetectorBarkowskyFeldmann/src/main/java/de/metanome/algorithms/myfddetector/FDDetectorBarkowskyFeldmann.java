@@ -28,7 +28,7 @@ public class FDDetectorBarkowskyFeldmann extends FDDetectorAlgorithmBarkowskyFel
 
     @Override
     public String getDescription() {
-        return "a priori fd algorithm"; // A string briefly describing what this algorithm does
+        return "TANE fd algorithm"; // A string briefly describing what this algorithm does
     }
 
     @Override
