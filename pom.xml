@@ -13,6 +13,7 @@
         <module>MetanomeTestRunner</module>
         <module>UCCDetectorBarkowskyFeldmann</module>
         <module>FDDetectorBarkowskyFeldmann</module>
+        <module>INDDetectorBarkowskyFeldmann</module>
     </modules>
 
 </project>
