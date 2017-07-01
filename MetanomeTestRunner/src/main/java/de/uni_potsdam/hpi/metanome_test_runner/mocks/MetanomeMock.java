@@ -11,6 +11,7 @@ import de.metanome.algorithm_integration.input.RelationalInputGenerator;
 import de.metanome.algorithm_integration.results.Result;
 import de.metanome.algorithm_integration.results.UniqueColumnCombination;
 import de.metanome.algorithms.myfddetector.FDDetectorBarkowskyFeldmann;
+import de.metanome.algorithms.myinddetector.INDDetectorBarkowskyFeldmann;
 import de.metanome.algorithms.myuccdetector.UCCDetectorBarkowskyFeldmann;
 import de.metanome.backend.input.file.DefaultFileInputGenerator;
 import de.metanome.backend.result_receiver.ResultCache;
@@ -45,6 +46,11 @@ public class MetanomeMock {
                     algorithm = new FDDetectorBarkowskyFeldmann();
                     ((FDDetectorBarkowskyFeldmann) algorithm).setRelationalInputConfigurationValue(FDDetectorBarkowskyFeldmann.Identifier.INPUT_GENERATOR.name(), inputGenerator);
                     ((FDDetectorBarkowskyFeldmann) algorithm).setResultReceiver(resultReceiver);
+                    break;
+                case MYINDDETECTOR:
+                    algorithm = new INDDetectorBarkowskyFeldmann();
+                    ((INDDetectorBarkowskyFeldmann) algorithm).setRelationalInputConfigurationValue(INDDetectorBarkowskyFeldmann.Identifier.INPUT_GENERATOR.name(), inputGenerator);
+                    ((INDDetectorBarkowskyFeldmann) algorithm).setResultReceiver(resultReceiver);
                     break;
                 default:
                     throw new IllegalArgumentException("wrong algorithm");

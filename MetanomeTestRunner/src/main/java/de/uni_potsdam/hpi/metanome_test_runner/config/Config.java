@@ -5,11 +5,11 @@ import java.io.File;
 public class Config {
 
     public enum Algorithm {
-        MYUCCDETECTOR, MYFDDETECTOR
+        MYUCCDETECTOR, MYFDDETECTOR, MYINDDETECTOR
     }
 
     public enum Dataset {
-        PLANETS, SYMBOLS, SCIENCE, SATELLITES, GAME, ASTRONOMICAL, ABALONE, ADULT, BALANCE, BREAST, BRIDGES, CHESS, ECHODIAGRAM, FLIGHT, HEPATITIS, HORSE, IRIS, LETTER, NURSERY, PETS, NCVOTER_1K, UNIPROD_1K
+        PLANETS, SYMBOLS, SCIENCE, SATELLITES, GAME, ASTRONOMICAL, ABALONE, ADULT, BALANCE, BREAST, BRIDGES, CHESS, ECHODIAGRAM, FLIGHT, HEPATITIS, HORSE, IRIS, LETTER, NURSERY, PETS, NCVOTER_1K, UNIPROD_1K, NCVOTER
     }
 
     public Config.Algorithm algorithm;
@@ -189,6 +189,11 @@ public class Config {
                 break;
             case NCVOTER_1K:
                 this.inputDatasetName = "ncvoter_1001r_19c";
+                this.inputFileSeparator = ',';
+                this.inputFileHasHeader = true;
+                break;
+            case NCVOTER:
+                this.inputDatasetName = "ncvoter";
                 this.inputFileSeparator = ',';
                 this.inputFileHasHeader = true;
                 break;
